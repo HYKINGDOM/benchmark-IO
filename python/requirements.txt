@@ -1,0 +1,27 @@
+# FastAPI and ASGI server
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+gunicorn==23.0.0
+
+# Database
+tortoise-orm[asyncpg]==0.21.6
+asyncpg==0.29.0
+
+# Data validation
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Excel export
+openpyxl==3.1.5
+
+# Utilities
+python-multipart==0.0.9
+aiofiles==24.1.0
+python-dotenv==1.0.1
+
+# Redis for task management
+aioredis==2.0.1
+redis==5.0.8
+
+# UUID generation
+uuid6==2024.1.12

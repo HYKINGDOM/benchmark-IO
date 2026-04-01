@@ -1,0 +1,24 @@
+# Grafana 数据源配置
+# 自动配置 Prometheus 数据源
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      # 查询超时时间
+      timeInterval: "15s"
+      # HTTP 方法
+      httpMethod: POST
+      # 自定义查询参数
+      customQueryParameters: ''
+      # 管理告警
+      manageAlerts: true
+      # Prometheus 类型
+      prometheusType: Prometheus
+    version: 1

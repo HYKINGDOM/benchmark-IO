@@ -1,0 +1,292 @@
+# 性能测试配置文件
+# 定义不同测试场景的参数配置
+
+# 服务端口配置
+services:
+  java:
+    port: 8080
+    name: "Java Spring Boot"
+    health_endpoint: "/actuator/health"
+  
+  golang:
+    port: 8081
+    name: "Golang Gin"
+    health_endpoint: "/health"
+  
+  python:
+    port: 8082
+    name: "Python FastAPI"
+    health_endpoint: "/health"
+  
+  rust:
+    port: 8083
+    name: "Rust Actix"
+    health_endpoint: "/health"
+
+# 并发级别配置
+concurrency:
+  single:
+    connections: 1
+    threads: 1
+    description: "单用户测试"
+  
+  low:
+    connections: 10
+    threads: 2
+    description: "低并发测试 (5-10 并发)"
+  
+  medium:
+    connections: 50
+    threads: 4
+    description: "中等并发测试 (20-50 并发)"
+  
+  high:
+    connections: 100
+    threads: 8
+    description: "高并发测试 (100+ 并发)"
+
+# 数据量配置
+data_sizes:
+  - size: 1000000
+    label: "100万"
+    date_range:
+      start: "2024-01-01"
+      end: "2024-02-28"
+  
+  - size: 2000000
+    label: "200万"
+    date_range:
+      start: "2024-01-01"
+      end: "2024-04-30"
+  
+  - size: 5000000
+    label: "500万"
+    date_range:
+      start: "2024-01-01"
+      end: "2024-08-31"
+  
+  - size: 10000000
+    label: "1000万"
+    date_range:
+      start: "2024-01-01"
+      end: "2024-12-31"
+  
+  - size: 20000000
+    label: "2000万"
+    date_range:
+      start: "2023-01-01"
+      end: "2024-12-31"
+
+# 测试时长配置
+durations:
+  short: "10s"
+  medium: "30s"
+  long: "60s"
+  endurance: "300s"
+
+# 测试场景配置
+test_scenarios:
+  # 查询接口测试
+  query:
+    - name: "基础查询"
+      params:
+        page: 1
+        page_size: 20
+    
+    - name: "时间范围筛选"
+      params:
+        start_date: "2024-01-01"
+        end_date: "2024-03-31"
+    
+    - name: "订单状态筛选"
+      params:
+        status: "paid"
+    
+    - name: "金额范围筛选"
+      params:
+        min_amount: 100
+        max_amount: 1000
+    
+    - name: "组合筛选"
+      params:
+        start_date: "2024-01-01"
+        end_date: "2024-06-30"
+        status: "paid"
+        min_amount: 100
+        max_amount: 1000
+
+  # 同步导出测试
+  sync_export:
+    - name: "CSV 导出"
+      params:
+        format: "csv"
+        start_date: "2024-01-01"
+        end_date: "2024-03-31"
+    
+    - name: "Excel 导出"
+      params:
+        format: "excel"
+        start_date: "2024-01-01"
+        end_date: "2024-03-31"
+    
+    - name: "大数据量导出"
+      params:
+        format: "csv"
+        start_date: "2024-01-01"
+        end_date: "2024-12-31"
+
+  # 异步导出测试
+  async_export:
+    - name: "异步 CSV 导出"
+      params:
+        format: "csv"
+        start_date: "2024-01-01"
+        end_date: "2024-06-30"
+    
+    - name: "异步 Excel 导出"
+      params:
+        format: "excel"
+        start_date: "2024-01-01"
+        end_date: "2024-06-30"
+
+  # 流式导出测试
+  stream_export:
+    - name: "流式 CSV 导出"
+      params:
+        format: "csv"
+        start_date: "2024-01-01"
+        end_date: "2024-06-30"
+    
+    - name: "流式 Excel 导出"
+      params:
+        format: "excel"
+        start_date: "2024-01-01"
+        end_date: "2024-06-30"
+
+# 性能基准配置
+performance_baselines:
+  query:
+    single:
+      min_qps: 100
+      max_p99_latency_ms: 50
+    
+    low:
+      min_qps: 500
+      max_p99_latency_ms: 100
+    
+    medium:
+      min_qps: 1000
+      max_p99_latency_ms: 200
+    
+    high:
+      min_qps: 1500
+      max_p99_latency_ms: 500
+  
+  sync_export:
+    single:
+      min_qps: 1
+      max_p99_latency_ms: 10000
+    
+    low:
+      min_qps: 5
+      max_p99_latency_ms: 15000
+    
+    medium:
+      min_qps: 10
+      max_p99_latency_ms: 20000
+    
+    high:
+      min_qps: 20
+      max_p99_latency_ms: 30000
+  
+  async_export:
+    single:
+      min_qps: 10
+      max_p99_latency_ms: 100
+    
+    low:
+      min_qps: 50
+      max_p99_latency_ms: 200
+    
+    medium:
+      min_qps: 100
+      max_p99_latency_ms: 500
+    
+    high:
+      min_qps: 200
+      max_p99_latency_ms: 1000
+  
+  stream_export:
+    single:
+      min_qps: 5
+      max_p99_latency_ms: 5000
+    
+    low:
+      min_qps: 20
+      max_p99_latency_ms: 8000
+    
+    medium:
+      min_qps: 50
+      max_p99_latency_ms: 10000
+    
+    high:
+      min_qps: 100
+      max_p99_latency_ms: 15000
+
+# API 配置
+api:
+  base_path: "/api/v1"
+  endpoints:
+    orders: "/orders"
+    sync_export: "/exports/sync"
+    async_export: "/exports/async"
+    task_status: "/exports/tasks/{task_id}"
+    sse_progress: "/exports/sse/{task_id}"
+    download: "/exports/download/{token}"
+    stream_export: "/exports/stream"
+  
+  auth:
+    type: "api_key"
+    header: "X-API-Key"
+    key: "benchmark-api-key-2024"
+
+# 监控配置
+monitoring:
+  enabled: true
+  metrics:
+    - cpu_usage
+    - memory_usage
+    - disk_io
+    - network_io
+    - db_connections
+    - request_latency
+  
+  interval_seconds: 5
+  
+  prometheus:
+    enabled: true
+    port: 9090
+  
+  grafana:
+    enabled: true
+    port: 3000
+
+# 报告配置
+reporting:
+  output_dir: "results"
+  formats:
+    - json
+    - csv
+    - markdown
+    - html
+  
+  charts:
+    enabled: true
+    types:
+      - line
+      - bar
+      - heatmap
+  
+  comparison:
+    enabled: true
+    baseline_service: "java"

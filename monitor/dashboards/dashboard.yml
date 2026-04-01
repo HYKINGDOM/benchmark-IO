@@ -1,0 +1,16 @@
+# Grafana Dashboard 配置
+# 自动加载 Dashboard
+
+apiVersion: 1
+
+providers:
+  - name: 'Benchmark Dashboards'
+    orgId: 1
+    folder: ''
+    folderUid: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

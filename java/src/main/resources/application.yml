@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: benchmark-java-api
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/benchmark}
+    username: ${DATABASE_USERNAME:benchmark}
+    password: ${DATABASE_PASSWORD:benchmark123}
+    hikari:
+      pool-name: BenchmarkHikariPool
+      minimum-idle: 10
+      maximum-pool-size: 50
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      leak-detection-threshold: 60000
+
+  jooq:
+    sql-dialect: postgres
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  task:
+    execution:
+      pool:
+        core-size: 10
+        max-size: 50
+        queue-capacity: 1000
+        thread-name-prefix: async-task-
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    accept-count: 100
+    max-connections: 10000
+
+api:
+  key: ${API_KEY:benchmark-api-key-2024}
+
+export:
+  temp-dir: ${java.io.tmpdir}/benchmark-exports
+  max-rows: 20000000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.benchmark: DEBUG
+    org.jooq: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

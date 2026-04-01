@@ -1,0 +1,36 @@
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
+    orders (order_id) {
+        order_id -> Int8,
+        order_no -> Varchar,
+        user_id -> Int8,
+        user_name -> Varchar,
+        user_phone -> Varchar,
+        user_id_card -> Varchar,
+        user_email -> Varchar,
+        user_address -> Varchar,
+        product_id -> Int8,
+        product_name -> Varchar,
+        product_category -> Varchar,
+        product_price -> Numeric,
+        quantity -> Int4,
+        total_amount -> Numeric,
+        discount_amount -> Numeric,
+        pay_amount -> Numeric,
+        order_status -> Varchar,
+        payment_method -> Varchar,
+        payment_time -> Nullable<Timestamp>,
+        order_source -> Varchar,
+        shipping_address -> Varchar,
+        receiver_name -> Varchar,
+        receiver_phone -> Varchar,
+        logistics_no -> Nullable<Varchar>,
+        delivery_time -> Nullable<Timestamp>,
+        complete_time -> Nullable<Timestamp>,
+        remark -> Nullable<Varchar>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+        is_deleted -> Int2,
+    }
+}
