@@ -2,7 +2,6 @@ package util
 
 import (
 	"benchmark-api/internal/model"
-	"fmt"
 	"strconv"
 	"time"
 

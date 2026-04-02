@@ -1,384 +1,269 @@
 # 百万级数据导出跨语言性能基准测试系统
 
-一个用于对比 Java、Golang、Python、Rust 四种语言在百万级数据导出场景下性能表现的基准测试系统。
-
-## 项目概述
-
-本系统旨在为技术选型提供客观的性能数据支撑，通过统一的测试场景和标准化的测试方法，对比不同编程语言在处理大规模数据导出时的性能差异。
-
-### 核心特性
-
-- **多语言支持**: Java (Spring Boot)、Golang (Gin)、Python (FastAPI)、Rust (Actix-web)
-- **多种导出模式**: 同步导出、异步导出、流式导出
-- **多格式支持**: CSV、Excel (XLSX)
-- **百万级数据**: 支持最高 2000 万条记录的导出测试
-- **完整监控**: Prometheus + Grafana + cAdvisor 实时监控
-- **可视化界面**: Vue.js 前端，实时查看测试进度和结果
+对比 Java、Golang、Python、Rust 四种语言在百万级数据导出场景下的性能表现。
 
 ## 系统架构
 
 ```mermaid
 graph TB
-    subgraph Frontend["前端层"]
-        FrontendApp[Vue.js Frontend<br/>:80]
+    subgraph Frontend["前端层 :80"]
+        VueApp[Vue 3 + Vite + Pinia]
     end
 
     subgraph Backend["后端服务层"]
-        JavaAPI[Java API<br/>Spring Boot<br/>:8080]
-        GolangAPI[Golang API<br/>Gin<br/>:8081]
-        PythonAPI[Python API<br/>FastAPI<br/>:8082]
-        RustAPI[Rust API<br/>Actix-web<br/>:8083]
+        Java[Java Spring Boot :8080]
+        Go[Golang Gin :8081]
+        Py[Python FastAPI :8082]
+        Rs[Rust Actix-web :8083]
     end
 
-    subgraph Database["数据层"]
-        PostgreSQL[(PostgreSQL 17<br/>:5432)]
+    subgraph Data["数据层"]
+        PG[(PostgreSQL 17 :5432)]
+        Gen[数据生成器]
     end
 
     subgraph Monitor["监控层"]
-        Prometheus[Prometheus<br/>:9090]
-        Grafana[Grafana<br/>:3000]
-        cAdvisor[cAdvisor<br/>:8084]
+        Prom[Prometheus :9090]
+        Graf[Grafana :3000]
+        Cad[cAdvisor :8084]
     end
 
-    FrontendApp --> JavaAPI
-    FrontendApp --> GolangAPI
-    FrontendApp --> PythonAPI
-    FrontendApp --> RustAPI
-
-    JavaAPI --> PostgreSQL
-    GolangAPI --> PostgreSQL
-    PythonAPI --> PostgreSQL
-    RustAPI --> PostgreSQL
-
-    Prometheus --> JavaAPI
-    Prometheus --> GolangAPI
-    Prometheus --> PythonAPI
-    Prometheus --> RustAPI
-    Prometheus --> cAdvisor
-    Prometheus --> PostgreSQL
-
-    Grafana --> Prometheus
+    VueApp --> Java & Go & Py & Rs
+    Java & Go & Py & Rs --> PG
+    Gen --> PG
+    Prom --> Java & Go & Py & Rs & PG & Cad
+    Graf --> Prom
 ```
 
 ## 技术栈
 
-### 后端服务
-
-| 语言 | 框架 | 数据库访问 | 连接池 | Excel 处理 |
-|------|------|-----------|--------|-----------|
-| Java | Spring Boot 3.2 | JOOQ | HikariCP | Apache POI (SXSSF) |
-| Golang | Gin | pgx | pgxpool | excelize |
-| Python | FastAPI | asyncpg | asyncpg | openpyxl |
-| Rust | Actix-web | Diesel | r2d2 | rust_xlsxwriter |
-
-### 前端 & 监控
-
-- **前端**: Vue 3 + Vite + Pinia + Axios
-- **数据库**: PostgreSQL 17
-- **监控**: Prometheus + Grafana + cAdvisor
-- **容器化**: Docker + Docker Compose
+| 语言 | 框架 | ORM/DB驱动 | 连接池 | Excel | 验证状态 |
+|------|------|-----------|--------|-------|---------|
+| **Java** | Spring Boot 3.2 / Gradle 8.12 | JOOQ | HikariCP | Apache POI SXSSF | ✅ 通过 |
+| **Golang** | Gin / Go latest | GORM/pgx | pgxpool | excelize | ✅ 通过 |
+| **Python** | FastAPI / Gunicorn | Tortoise ORM/asyncpg | asyncpg | openpyxl | ✅ 通过 |
+| **Rust** | Actix-web / Cargo latest | Diesel | r2d2 | xlsxwriter | ⚠️ 编译阻塞 |
+| **前端** | Vue 3 + Vite + Pinia | - | - | Nginx | 待验证 |
+| **数据库** | PostgreSQL 17 | - | - | - | ✅ 通过 |
 
 ## 快速开始
 
 ### 前置要求
 
-- Docker 20.10+
-- Docker Compose 2.0+
-- 内存: 至少 8GB (推荐 16GB)
-- 磁盘: 至少 20GB 可用空间
+- Docker Engine 20.10+ / Docker Compose 2.0+
+- 内存 ≥ 8GB（推荐 16GB）
+- 磁盘 ≥ 20GB 可用空间
 
-### 一键启动
+### 分步启动（推荐验证流程）
 
 ```bash
-# 克隆项目
-git clone <repository-url>
 cd benchmark-IO
 
-# 启动所有服务
-./scripts/start.sh start
+# 1. 复制环境变量配置
+cp .env.example .env
 
-# 生成测试数据（首次运行）
-./scripts/start.sh generate-data 2000000
+# 2. 启动数据库
+docker compose up -d postgres
+
+# 3. 生成测试数据（默认 2000 万条，可加 --total 调整）
+docker compose build data-generator
+docker compose run --rm data-generator python main.py generate --total 10000
+
+# 4. 逐一构建并验证后端服务
+docker compose build java-api && docker compose up -d java-api
+curl http://localhost:8080/actuator/health          # {"status":"UP"}
+docker compose stop java-api                          # 验证后关闭释放内存
+
+docker compose build golang-api && docker compose up -d golang-api
+curl http://localhost:8081/health                     # {"service":"golang-api","status":"ok"}
+docker compose stop golang-api
+
+docker compose build python-api && docker compose up -d python-api
+curl http://localhost:8082/health                     # {"status":"healthy",...}
+docker compose stop python-api
+
+# 5. 构建并启动前端（需至少一个后端运行中）
+docker compose build frontend && docker compose up -d frontend
+curl http://localhost                               # Vue.js 页面
+
+# 6. 全部完成，清理
+docker compose down
 ```
 
-### 访问服务
+### 一键启动（跳过逐步验证）
+
+```bash
+# 使用默认配置启动全部服务
+docker compose up -d
+
+# 查看所有服务状态
+docker compose ps
+```
+
+### 服务访问地址
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 前端界面 | http://localhost | Vue.js 前端 |
-| Java API | http://localhost:8080 | Spring Boot 服务 |
-| Golang API | http://localhost:8081 | Gin 服务 |
-| Python API | http://localhost:8082 | FastAPI 服务 |
-| Rust API | http://localhost:8083 | Actix-web 服务 |
-| Grafana | http://localhost:3000 | 监控面板 (admin/admin123) |
+| 前端 | http://localhost | Vue.js 界面 |
+| Java API | http://localhost:8080 | Spring Boot |
+| Golang API | http://localhost:8081 | Gin |
+| Python API | http://localhost:8082 | FastAPI |
+| Rust API | http://localhost:8083 | Actix-web |
+| Grafana | http://localhost:3000 | admin/admin123 |
 | Prometheus | http://localhost:9090 | 指标查询 |
-| cAdvisor | http://localhost:8084 | 容器监控 |
 
-**API Key**: `benchmark-api-key-2024`
+**API Key**: `benchmark-api-key-2024`（Header: `X-API-Key`）
 
-## API 接口
+## 核心接口
 
-### 认证方式
+### 认证
 
-所有 API 请求需要在 Header 中携带 API Key:
+所有请求需携带：`X-API-Key: benchmark-api-key-2024`
 
-```http
-X-API-Key: benchmark-api-key-2024
-```
+### 接口列表
 
-### 核心接口
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/orders?page=1&size=20` | 订单分页查询 |
+| POST | `/api/v1/exports/sync` | 同步导出 (CSV/Excel) |
+| POST | `/api/v1/exports/async` | 异步导出任务 |
+| GET | `/api/v1/exports/tasks/{id}` | 任务状态查询 |
+| GET | `/api/v1/exports/sse/{id}` | SSE 进度推送 |
+| GET | `/api/v1/exports/download/{token}` | 文件下载 |
+| POST | `/api/v1/exports/stream` | 流式导出 |
 
-#### 1. 订单查询
-
-```http
-GET /api/v1/orders?page=1&pageSize=20
-```
-
-#### 2. 同步导出
-
-```http
-POST /api/v1/exports/sync
-Content-Type: application/json
-
-{
-  "format": "csv",
-  "limit": 100000,
-  "conditions": {
-    "startTime": "2024-01-01",
-    "endTime": "2024-12-31"
-  }
-}
-```
-
-#### 3. 异步导出
-
-```http
-POST /api/v1/exports/async
-Content-Type: application/json
-
-{
-  "format": "xlsx",
-  "limit": 1000000
-}
-```
-
-#### 4. 任务状态查询
-
-```http
-GET /api/v1/exports/tasks/{task_id}
-```
-
-#### 5. SSE 进度推送
-
-```http
-GET /api/v1/exports/sse/{task_id}
-Accept: text/event-stream
-```
-
-#### 6. 文件下载
-
-```http
-GET /api/v1/exports/download/{token}
-```
-
-#### 7. 流式导出
-
-```http
-POST /api/v1/exports/stream
-Content-Type: application/json
-
-{
-  "format": "csv",
-  "limit": 1000000
-}
-```
-
-详细 API 文档请参考 [API 接口文档](docs/api.md)。
-
-## 性能测试
-
-### 测试场景
-
-1. **查询性能测试**: 测试不同并发级别下的查询 QPS 和延迟
-2. **同步导出测试**: 测试不同数据量下的导出时间
-3. **异步导出测试**: 测试异步任务处理能力和内存占用
-4. **流式导出测试**: 测试流式传输的性能表现
-
-### 运行测试
-
-```bash
-# 进入测试目录
-cd benchmark/scripts
-
-# 运行快速测试
-./run_all.sh quick
-
-# 运行完整测试套件
-./run_all.sh full
-
-# 收集测试结果
-./collect_results.sh all
-```
-
-详细测试指南请参考 [测试指南](docs/testing.md)。
+详细文档见 [docs/api.md](docs/api.md)
 
 ## 项目结构
 
 ```
 benchmark-IO/
-├── java/                    # Java 后端服务
-│   ├── src/                # 源代码
-│   ├── build.gradle        # Gradle 配置
-│   └── Dockerfile          # Docker 构建文件
-├── golang/                  # Golang 后端服务
-│   ├── cmd/                # 入口程序
-│   ├── internal/           # 内部代码
+├── java/                    # ✅ Java 后端 (Spring Boot)
+│   ├── src/main/java/com/benchmark/
+│   │   ├── config/          # 数据库、异步、Web 配置
+│   │   ├── controller/      # Export, Order 控制器
+│   │   ├── middleware/       # API Key 认证
+│   │   ├── model/           # Order, Task, Export 模型
+│   │   ├── repository/      # JOOQ 数据访问层
+│   │   ├── service/         # 业务逻辑（导出、订单、异步任务）
+│   │   └── util/            # CSV/Excel 写入工具
 │   └── Dockerfile
-├── python/                  # Python 后端服务
-│   ├── app/                # 应用代码
-│   ├── requirements.txt    # 依赖列表
+├── golang/                  # ✅ Golang 后端 (Gin)
+│   ├── cmd/main.go          # 入口
+│   ├── internal/
+│   │   ├── config/          # 配置加载
+│   │   ├── controller/      # 控制器
+│   │   ├── middleware/       # 认证中间件
+│   │   ├── model/           # 数据模型
+│   │   ├── repository/      # GORM 数据访问
+│   │   ├── service/         # 业务逻辑
+│   │   └── util/            # CSV/Excel 工具
 │   └── Dockerfile
-├── rust/                    # Rust 后端服务
-│   ├── src/                # 源代码
-│   ├── Cargo.toml          # Cargo 配置
+├── python/                  # ✅ Python 后端 (FastAPI)
+│   ├── app/
+│   │   ├── main.py          # 应用入口
+│   │   ├── config.py        # 配置
+│   │   ├── models/          # Tortoise 模型
+│   │   ├── api/             # 路由
+│   │   ├── middleware/       # 认证中间件
+│   │   ├── services/        # 业务逻辑
+│   │   └── utils/           # 导出工具
+│   ├── gunicorn.conf.py
+│   └── Dockerfile
+├── rust/                    # ⚠️ Rust 后端 (Actix-web)
+│   ├── src/
+│   │   ├── main.rs          # 入口
+│   │   ├── models/          # Diesel 模型
+│   │   ├── handlers/        # 请求处理器
+│   │   ├── utils/           # Excel 工具
+│   │   └── db.rs            # 数据库连接
+│   ├── .cargo/config.toml   # Cargo 国内镜像
 │   └── Dockerfile
 ├── frontend/                # Vue.js 前端
-│   ├── src/                # 源代码
-│   ├── package.json        # NPM 配置
+│   ├── src/
+│   │   ├── views/           # Orders, Tasks 页面
+│   │   ├── components/      # UI 组件
+│   │   ├── api/             # API 调用
+│   │   ├── stores/          # Pinia 状态管理
+│   │   └── utils/           # 请求/SSE 工具
 │   └── Dockerfile
-├── postgres/                # PostgreSQL 配置
-│   ├── postgresql.conf     # 数据库配置
+├── postgres/                # PostgreSQL 17 配置
+│   ├── postgresql.conf      # 性能优化配置
 │   └── pg_hba.conf         # 访问控制
-├── monitor/                 # 监控配置
-│   ├── prometheus.yml      # Prometheus 配置
-│   ├── dashboards/         # Grafana Dashboard
-│   └── datasources/        # 数据源配置
-├── init/                    # 初始化脚本
-│   ├── init.sql            # 数据库初始化
-│   └── generate_data/      # 数据生成工具
-├── benchmark/               # 性能测试脚本
-│   ├── scripts/            # wrk 测试脚本
-│   └── results/            # 测试结果
-├── scripts/                 # 运维脚本
-│   └── start.sh            # 一键启动脚本
-├── docs/                    # 文档
-│   ├── deploy.md           # 部署文档
-│   ├── api.md              # API 文档
-│   └── testing.md          # 测试指南
-├── docker-compose.yml       # Docker Compose 配置
+├── init/
+│   ├── init.sql             # 数据库初始化脚本（30 字段 orders 表）
+│   └── generate_data/       # Python 数据生成工具
+├── docker-compose.yml       # Docker Compose 编排
 ├── .env.example             # 环境变量模板
-└── README.md                # 本文档
+└── docs/                    # 项目文档
 ```
 
-## 部署指南
+## 已知问题与解决方案
 
-### 开发环境
+### PostgreSQL 17 兼容性
+- **问题**: `stats_temp_directory` 参数在 PostgreSQL 17 中已移除
+- **解决**: 已注释掉 [postgres/postgresql.conf](postgres/postgresql.conf) 中的该配置
+
+### Java JDK 21 Record 冲突
+- **问题**: `java.lang.Record` 与 JOOQ 的 `org.jooq.Record` 类型歧义
+- **解决**: OrderRepository.java 改为显式导入 `org.jooq.*` 相关类
+
+### Java 时间/数值类型转换
+- **问题**: JDBC 返回 `java.sql.Timestamp`/`Short`，代码期望 `LocalDateTime`/`Integer`
+- **解决**: 添加 `toLocalDateTime()` 和 `toInt()` 类型转换方法
+
+### Go 代理超时
+- **问题**: `proxy.golang.org` 在国内不可达
+- **解决**: Dockerfile 设置 `GOPROXY=https://goproxy.io,direct`
+
+### Python Tortoise ORM 配置
+- **问题**: `minsize`/`maxsize` 参数不支持；`generate_schemas()` 与已有表冲突
+- **解决**: 移除连接池参数，注释自动建表（使用 init.sql）
+
+### Rust xlsxwriter API 变更
+- **问题**: xlsxwriter 0.6.x 的 Format/Worksheet API 发生重大变更（19 个编译错误）
+- **状态**: 待修复，需要适配新版本的 builder pattern API
+
+### Docker 镜像源问题
+- **问题**: 部分镜像在 Apple Silicon (arm64) 上不可用或下载失败
+- **解决**: alpine 基础镜像改为完整版；apt-get/pip/cargo 添加国内镜像和重试机制
+
+## 配置说明
+
+所有配置通过 `.env` 文件管理：
 
 ```bash
-# 使用默认配置启动
-./scripts/start.sh start
+# 复制模板
+cp .env.example .env
 
-# 查看服务状态
-./scripts/start.sh status
-
-# 查看日志
-./scripts/start.sh logs -f java-api
+# 按需修改
+vim .env
 ```
 
-### 生产环境
+主要配置分类：
+- **数据库**: `POSTGRES_*`, `DB_*`
+- **认证**: `API_KEY`, `API_KEYS`
+- **端口**: `*_PORT`, `PORT`, `SERVER_PORT`
+- **运行时**: `JAVA_OPTS`, `PYTHON_WORKERS`, `GIN_MODE`, `RUST_LOG`
+- **监控**: `GRAFANA_*`, `PROMETHEUS_*`
 
-生产环境部署请参考 [部署文档](docs/deploy.md)，包括：
+## 性能测试
 
-- 环境变量配置
-- 资源限制调整
-- 数据持久化
-- 安全加固
-- 高可用配置
-
-## 监控指标
-
-### 关键指标
-
-- **应用性能**: QPS、响应时间 (P50/P95/P99)、错误率
-- **资源使用**: CPU、内存、磁盘 I/O、网络 I/O
-- **数据库**: 连接数、查询性能、事务数
-- **导出性能**: 导出速度、内存占用、文件大小
-
-### Grafana Dashboard
-
-系统预置了 Benchmark 监控面板，提供：
-
-- 多语言服务性能对比
-- 实时资源监控
-- 数据库性能指标
-- 导出任务统计
-
-## 性能优化建议
-
-### Java
-
-- 使用 HikariCP 连接池，合理配置连接数
-- Excel 导出使用 SXSSF 流式 API
-- 调整 JVM 堆内存和 GC 策略
-
-### Golang
-
-- 使用 pgxpool 连接池
-- 控制并发 goroutine 数量
-- 使用 buffer 减少 I/O 操作
-
-### Python
-
-- 使用 asyncpg 异步数据库驱动
-- 配置合理的 Gunicorn workers 数量
-- 使用流式响应避免内存溢出
-
-### Rust
-
-- 使用 Diesel ORM 和连接池
-- 利用 Rust 的零成本抽象
-- 合理配置 actix-web worker 数量
-
-## 常见问题
-
-### 1. 服务启动失败
-
-检查端口是否被占用：
 ```bash
-lsof -i :8080
-lsof -i :5432
+cd benchmark/scripts
+
+# 快速测试
+./run_all.sh quick
+
+# 完整测试套件
+./run_all.sh full
+
+# 收集结果
+./collect_results.sh all
 ```
 
-### 2. 数据库连接失败
-
-确保 PostgreSQL 已启动：
-```bash
-docker compose ps postgres
-docker compose logs postgres
-```
-
-### 3. 内存不足
-
-调整 Docker 内存限制或减少并发数：
-```bash
-# 修改 .env 文件
-JAVA_OPTS=-Xms256m -Xmx512m
-```
-
-### 4. 导出速度慢
-
-- 检查数据库索引是否正确
-- 调整数据库连接池大小
-- 使用流式导出替代同步导出
-
-## 贡献指南
-
-欢迎提交 Issue 和 Pull Request。
+详细指南见 [docs/testing.md](docs/testing.md)、[docs/deploy.md](docs/deploy.md)
 
 ## 许可证
 
 MIT License
-
-## 联系方式
-
-如有问题，请提交 Issue 或联系维护团队。

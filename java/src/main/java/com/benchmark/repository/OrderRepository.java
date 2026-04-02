@@ -4,7 +4,13 @@ import com.benchmark.model.Order;
 import com.benchmark.model.OrderQueryRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.*;
+import org.jooq.Condition;
+import org.jooq.Cursor;
+import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.SelectConditionStep;
+import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
@@ -43,7 +49,7 @@ public class OrderRepository {
     private static final Field<String> PRODUCT_NAME = field(name("product_name"), String.class);
     private static final Field<String> PRODUCT_CATEGORY = field(name("product_category"), String.class);
     private static final Field<BigDecimal> PRODUCT_PRICE = field(name("product_price"), BigDecimal.class);
-    private static final Field<Integer> QUANTITY = field(name("quantity"), Integer.class);
+    private static final Field<?> QUANTITY = field(name("quantity"));
     private static final Field<BigDecimal> TOTAL_AMOUNT = field(name("total_amount"), BigDecimal.class);
     private static final Field<BigDecimal> DISCOUNT_AMOUNT = field(name("discount_amount"), BigDecimal.class);
     private static final Field<BigDecimal> PAY_AMOUNT = field(name("pay_amount"), BigDecimal.class);
@@ -60,7 +66,7 @@ public class OrderRepository {
     private static final Field<String> REMARK = field(name("remark"), String.class);
     private static final Field<LocalDateTime> CREATED_AT = field(name("created_at"), LocalDateTime.class);
     private static final Field<LocalDateTime> UPDATED_AT = field(name("updated_at"), LocalDateTime.class);
-    private static final Field<Integer> IS_DELETED = field(name("is_deleted"), Integer.class);
+    private static final Field<?> IS_DELETED = field(name("is_deleted"));
 
     /**
      * Query orders with pagination
@@ -118,7 +124,8 @@ public class OrderRepository {
     /**
      * Stream orders for large export
      */
-    public Cursor<Record> streamOrders(OrderQueryRequest request, Integer limit) {
+    @SuppressWarnings("unchecked")
+    public Cursor<?> streamOrders(OrderQueryRequest request, Integer limit) {
         SelectConditionStep<?> query = dsl.select()
                 .from(ORDERS)
                 .where(buildConditions(request));
@@ -137,7 +144,7 @@ public class OrderRepository {
      * Build query conditions
      */
     private Condition buildConditions(OrderQueryRequest request) {
-        Condition condition = IS_DELETED.eq(0);
+        Condition condition = condition("is_deleted = 0");
 
         if (request.getStartTime() != null) {
             LocalDateTime startDateTime = request.getStartTime().atStartOfDay();
@@ -194,24 +201,39 @@ public class OrderRepository {
                 .productName(record.get(PRODUCT_NAME))
                 .productCategory(record.get(PRODUCT_CATEGORY))
                 .productPrice(record.get(PRODUCT_PRICE))
-                .quantity(record.get(QUANTITY))
+                .quantity(toInt(record.get(QUANTITY)))
                 .totalAmount(record.get(TOTAL_AMOUNT))
                 .discountAmount(record.get(DISCOUNT_AMOUNT))
                 .payAmount(record.get(PAY_AMOUNT))
                 .orderStatus(record.get(ORDER_STATUS))
                 .paymentMethod(record.get(PAYMENT_METHOD))
-                .paymentTime(record.get(PAYMENT_TIME))
+                .paymentTime(toLocalDateTime(record.get(PAYMENT_TIME)))
                 .orderSource(record.get(ORDER_SOURCE))
                 .shippingAddress(record.get(SHIPPING_ADDRESS))
                 .receiverName(record.get(RECEIVER_NAME))
                 .receiverPhone(record.get(RECEIVER_PHONE))
                 .logisticsNo(record.get(LOGISTICS_NO))
-                .deliveryTime(record.get(DELIVERY_TIME))
-                .completeTime(record.get(COMPLETE_TIME))
+                .deliveryTime(toLocalDateTime(record.get(DELIVERY_TIME)))
+                .completeTime(toLocalDateTime(record.get(COMPLETE_TIME)))
                 .remark(record.get(REMARK))
-                .createdAt(record.get(CREATED_AT))
-                .updatedAt(record.get(UPDATED_AT))
-                .isDeleted(record.get(IS_DELETED))
+                .createdAt(toLocalDateTime(record.get(CREATED_AT)))
+                .updatedAt(toLocalDateTime(record.get(UPDATED_AT)))
+                .isDeleted(toInt(record.get(IS_DELETED)))
                 .build();
+    }
+
+    private LocalDateTime toLocalDateTime(Object value) {
+        if (value == null) return null;
+        if (value instanceof LocalDateTime) return (LocalDateTime) value;
+        if (value instanceof java.sql.Timestamp) return ((java.sql.Timestamp) value).toLocalDateTime();
+        if (value instanceof java.sql.Date) return ((java.sql.Date) value).toLocalDate().atStartOfDay();
+        return null;
+    }
+
+    private Integer toInt(Object value) {
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Number) return ((Number) value).intValue();
+        return null;
     }
 }

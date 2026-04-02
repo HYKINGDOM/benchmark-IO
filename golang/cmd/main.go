@@ -9,7 +9,6 @@ import (
 	"benchmark-api/internal/service"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"

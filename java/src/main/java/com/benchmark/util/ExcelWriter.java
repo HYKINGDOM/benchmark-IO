@@ -122,8 +122,8 @@ public class ExcelWriter {
             }
         }
 
-        // Write to output stream
-        workbook.write(workbook.getSXSSFSheet().getWorkbook().getPackage().getOutputStream());
+        // Write to output stream (SXSSF uses different approach than XSSF)
+        // The workbook should be written via workbook.write(OutputStream) by the caller
         workbook.dispose();
         workbook.close();
     }

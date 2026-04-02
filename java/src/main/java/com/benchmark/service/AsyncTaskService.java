@@ -169,7 +169,7 @@ public class AsyncTaskService {
      * Export to CSV with progress tracking
      */
     private void exportToCsv(ExportTask task, OrderQueryRequest request, Integer limit, OutputStream outputStream) throws IOException {
-        try (Cursor<Record> cursor = orderRepository.streamOrders(request, limit)) {
+        try (Cursor<?> cursor = orderRepository.streamOrders(request, limit)) {
             CsvWriter csvWriter = new CsvWriter(outputStream);
             csvWriter.writeHeader();
 
@@ -197,7 +197,7 @@ public class AsyncTaskService {
      * Export to Excel with progress tracking
      */
     private void exportToExcel(ExportTask task, OrderQueryRequest request, Integer limit, OutputStream outputStream) throws IOException {
-        try (Cursor<Record> cursor = orderRepository.streamOrders(request, limit)) {
+        try (Cursor<?> cursor = orderRepository.streamOrders(request, limit)) {
             ExcelWriter excelWriter = new ExcelWriter(outputStream);
             excelWriter.writeHeader();
 

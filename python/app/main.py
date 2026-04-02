@@ -37,12 +37,10 @@ async def lifespan(app: FastAPI):
     await Tortoise.init(
         db_url=settings.DATABASE_URL,
         modules={"models": ["app.models.order", "app.models.task"]},
-        minsize=settings.DB_POOL_MIN,
-        maxsize=settings.DB_POOL_MAX,
     )
 
-    # Generate schemas (create tables if not exist)
-    await Tortoise.generate_schemas()
+    # Note: Tables are created by init.sql, skip auto schema generation
+    # await Tortoise.generate_schemas(safe=True)
 
     # Create export directory
     export_dir = Path(settings.EXPORT_DIR)

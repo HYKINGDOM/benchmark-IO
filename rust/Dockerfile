@@ -1,17 +1,27 @@
-# 构建阶段
-FROM rust:1.75 AS builder
+# 构建阶段（使用最新稳定版以支持 edition2024）
+FROM rust:latest AS builder
 
 WORKDIR /app
 
-# 安装依赖
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# 安装依赖（带重试机制）
+RUN for i in 1 2 3; do \
+    apt-get update && apt-get install -y --no-install-recommends --fix-missing \
+        pkg-config \
+        libssl-dev \
+        libpq-dev \
+        libclang-dev \
+        && rm -rf /var/lib/apt/lists/* && break || \
+        (echo "Retry $i/3..." && sleep 5); \
+    done
 
-# 复制 Cargo 文件
-COPY Cargo.toml Cargo.lock ./
+# 配置使用 sparse 协议（更快）
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+
+# 使用国内镜像源加速依赖下载
+COPY .cargo/config.toml /usr/local/cargo/config.toml
+
+# 复制 Cargo 文件（Cargo.lock 不存在时 Cargo 会自动生成）
+COPY Cargo.toml ./
 
 # 创建空的 src 目录和 main.rs 以缓存依赖
 RUN mkdir src && \

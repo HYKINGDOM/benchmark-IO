@@ -1,222 +1,108 @@
-# Benchmark Java API
+# Java 后端服务 (Spring Boot)
 
-Java 后端服务，使用 Spring Boot 3.2 + JOOQ + HikariCP 实现。
+基于 Spring Boot 3.2 的订单查询与数据导出 API 服务。
 
 ## 技术栈
 
-- JDK 21
-- Spring Boot 3.2.5
-- JOOQ 3.19.7
-- HikariCP 5.1.0
-- Apache POI 5.2.5
-- PostgreSQL 17
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| Java | 21 (JDK) | LTS 版本 |
+| Spring Boot | 3.2.x | 应用框架 |
+| Gradle | 8.12 | 构建工具 |
+| JOOQ | 3.x | 类型安全 SQL 构建 |
+| HikariCP | 内置 | 数据库连接池 |
+| Apache POI | SXSSF | 流式 Excel 写入 |
 
 ## 项目结构
 
 ```
 java/
 ├── src/main/java/com/benchmark/
-│   ├── BenchmarkApplication.java      # 主应用
-│   ├── config/                        # 配置类
-│   │   ├── DatabaseConfig.java       # 数据库配置
-│   │   ├── AsyncConfig.java          # 异步配置
-│   │   └── WebConfig.java            # Web配置
-│   ├── controller/                    # 控制器
-│   │   ├── OrderController.java      # 订单查询
-│   │   └── ExportController.java     # 数据导出
-│   ├── service/                       # 服务层
-│   │   ├── OrderService.java         # 订单服务
-│   │   ├── ExportService.java        # 导出服务
-│   │   └── AsyncTaskService.java     # 异步任务服务
-│   ├── repository/                    # 数据访问层
-│   │   └── OrderRepository.java      # 订单仓库
-│   ├── model/                         # 模型类
-│   │   ├── Order.java                # 订单实体
-│   │   ├── ExportTask.java           # 导出任务
-│   │   ├── ApiResponse.java          # API响应
-│   │   ├── PageResponse.java         # 分页响应
-│   │   ├── OrderQueryRequest.java    # 查询请求
-│   │   └── ExportRequest.java        # 导出请求
-│   ├── middleware/                    # 中间件
-│   │   └── ApiKeyAuthFilter.java     # API Key认证
-│   └── util/                          # 工具类
-│       ├── CsvWriter.java            # CSV写入器
-│       └── ExcelWriter.java          # Excel写入器
-├── src/main/resources/
-│   └── application.yml               # 应用配置
-├── build.gradle                      # Gradle构建文件
-├── settings.gradle                   # Gradle设置
-└── Dockerfile                        # Docker构建文件
-```
-
-## API 接口
-
-### 1. 订单查询
-
-```http
-GET /api/v1/orders
-Header: X-API-Key: benchmark-api-key-2024
-```
-
-**查询参数：**
-- page: 页码（默认 1）
-- pageSize: 每页条数（默认 20）
-- startTime: 开始时间
-- endTime: 结束时间
-- status: 订单状态
-- minAmount: 最小金额
-- maxAmount: 最大金额
-- userId: 用户ID
-- orderNo: 订单编号
-
-### 2. 同步导出
-
-```http
-POST /api/v1/exports/sync
-Header: X-API-Key: benchmark-api-key-2024
-Content-Type: application/json
-
-{
-  "format": "csv",
-  "limit": 100000,
-  "conditions": {
-    "startTime": "2024-01-01",
-    "endTime": "2024-12-31",
-    "status": "已支付"
-  }
-}
-```
-
-### 3. 异步导出
-
-```http
-POST /api/v1/exports/async
-Header: X-API-Key: benchmark-api-key-2024
-Content-Type: application/json
-
-{
-  "format": "xlsx",
-  "limit": 1000000
-}
-```
-
-**响应：**
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "task_id": "uuid-xxx-xxx",
-    "status": "pending"
-  }
-}
-```
-
-### 4. 任务状态查询
-
-```http
-GET /api/v1/exports/tasks/{task_id}
-Header: X-API-Key: benchmark-api-key-2024
-```
-
-### 5. SSE 进度推送
-
-```http
-GET /api/v1/exports/sse/{task_id}
-Header: X-API-Key: benchmark-api-key-2024
-```
-
-### 6. 文件下载
-
-```http
-GET /api/v1/exports/download/{token}
-Header: X-API-Key: benchmark-api-key-2024
-```
-
-### 7. 流式导出
-
-```http
-POST /api/v1/exports/stream
-Header: X-API-Key: benchmark-api-key-2024
-Content-Type: application/json
-
-{
-  "format": "csv",
-  "limit": 1000000
-}
+│   ├── BenchmarkApplication.java   # 启动类
+│   ├── config/
+│   │   ├── DatabaseConfig.java     # JOOQ + DataSource 配置
+│   │   ├── AsyncConfig.java        # 异步线程池
+│   │   └── WebConfig.java          # CORS/WebMvc 配置
+│   ├── controller/
+│   │   ├── ExportController.java   # 导出接口（同步/异步/流式/SSE）
+│   │   └── OrderController.java    # 订单查询接口
+│   ├── middleware/
+│   │   └── auth.java               # API Key 认证中间件
+│   ├── model/
+│   │   ├── Order.java              # 订单实体 (30 字段, Lombok Builder)
+│   │   ├── Task.java               # 异步任务模型
+│   │   ├── ExportRequest.java      # 导出请求 DTO
+│   │   └── PageResponse.java       # 分页响应
+│   ├── repository/
+│   │   └── OrderRepository.java    # JOOQ 数据访问层
+│   ├── service/
+│   │   ├── OrderService.java       # 订单业务逻辑
+│   │   ├── ExportService.java      # 导出逻辑（CSV/Excel）
+│   │   └── AsyncTaskService.java   # 异步任务管理
+│   └── util/
+│       ├── CsvWriter.java          # CSV 文件写入
+│       └── ExcelWriter.java         # SXSSF Excel 写入
+├── build.gradle
+├── settings.gradle
+└── Dockerfile                      # 多阶段构建
 ```
 
 ## 本地开发
 
-### 前置要求
-
-- JDK 21+
-- Gradle 8.5+
-- PostgreSQL 17+
-
-### 运行步骤
-
-1. 设置环境变量：
 ```bash
+cd java
+
+# 设置环境变量
+export SPRING_PROFILES_ACTIVE=docker
 export DATABASE_URL=jdbc:postgresql://localhost:5432/benchmark
 export DATABASE_USERNAME=benchmark
 export DATABASE_PASSWORD=benchmark123
 export API_KEY=benchmark-api-key-2024
-```
 
-2. 构建项目：
-```bash
-cd java
-gradle clean build
-```
+# 运行
+./gradlew bootRun
 
-3. 运行应用：
-```bash
-gradle bootRun
+# 或 IDEA 直接运行 BenchmarkApplication
 ```
-
-应用将在 http://localhost:8080 启动。
 
 ## Docker 构建
 
 ```bash
-cd java
-docker build -t benchmark-java .
+docker compose build java-api
+docker compose up -d java-api
+
+# 验证
+curl http://localhost:8080/actuator/health
 ```
 
-## 性能优化
+## 关键接口
 
-### 数据库连接池
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/actuator/health` | 健康检查 → `{"status":"UP"}` |
+| GET | `/api/v1/orders?page=1&size=20` | 分页查询订单 |
+| POST | `/api/v1/exports/sync` | 同步导出 |
+| POST | `/api/v1/exports/async` | 异步导出任务 |
+| GET | `/api/v1/exports/tasks/{id}` | 任务状态 |
+| GET | `/api/v1/exports/sse/{id}` | SSE 进度推送 |
 
-- HikariCP 最大连接数：50
-- 最小空闲连接数：10
-- 连接超时：30秒
-- 空闲超时：5分钟
-- 最大生命周期：30分钟
+## 已知修复记录
 
-### 异步处理
+1. **JDK21 Record 冲突**: `java.lang.Record` 与 `org.jooq.Record` 歧义 → 显式导入 JOOQ 类
+2. **时间类型转换**: JDBC `Timestamp` → `LocalDateTime` 添加 `toLocalDateTime()` 方法
+3. **数值类型转换**: PostgreSQL `smallint`(Short) → Integer 添加 `toInt()` 方法
+4. **ExcelWriter SXSSF**: `getSXSSFSheet()` API 变更 → 移除直接写入，改为调用方处理
+5. **Cursor 泛型**: `Cursor<Record>` 类型不匹配 → 改为 `Cursor<?>`
+6. **基础镜像**: `gradle:8.5-jdk21-alpine` arm64 不存在 → 改用 `gradle:8.12-jdk21`
+7. **运行时镜像**: `eclipse-temurin:21-jre-alpine` 镜像源 403 → 改用完整版
 
-- 核心线程数：10
-- 最大线程数：50
-- 队列容量：1000
+## 环境变量
 
-### 导出优化
-
-- 使用 JOOQ Cursor 流式读取数据
-- CSV 使用 Apache Commons CSV
-- Excel 使用 Apache POI SXSSF（流式写入）
-- 每 1000 条记录更新进度
-- 内存中只保留 100 行 Excel 数据
-
-## 监控
-
-- Spring Boot Actuator 健康检查：`/actuator/health`
-- Prometheus 指标：`/actuator/prometheus`
-
-## 注意事项
-
-1. 所有 API 请求需要在 Header 中传递 `X-API-Key`
-2. 导出文件默认保存在系统临时目录
-3. 异步任务状态存储在内存中（生产环境建议使用 Redis）
-4. Excel 导出使用流式写入，避免内存溢出
-5. 最大导出行数限制为 2000 万行
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `SPRING_PROFILES_ACTIVE` | docker | Spring Profile |
+| `DATABASE_URL` | - | JDBC 连接串 |
+| `DATABASE_USERNAME` | benchmark | DB 用户名 |
+| `DATABASE_PASSWORD` | benchmark123 | DB 密码 |
+| `API_KEY` | benchmark-api-key-2024 | API 认证密钥 |
+| `JAVA_OPTS` | -Xms512m -Xmx1024m | JVM 参数 |

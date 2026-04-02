@@ -4,11 +4,14 @@ FROM python:3.12-slim
 # 设置工作目录
 WORKDIR /app
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# 安装系统依赖（带重试机制应对网络不稳定）
+RUN for i in 1 2 3; do \
+    apt-get update && apt-get install -y --no-install-recommends --fix-missing \
+        gcc \
+        libpq-dev \
+        && rm -rf /var/lib/apt/lists/* && break || \
+        (echo "Retry $i/3..." && sleep 5); \
+    done
 
 # 复制依赖文件
 COPY requirements.txt .

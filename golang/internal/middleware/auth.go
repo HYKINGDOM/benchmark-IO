@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"benchmark-api/pkg/response"
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -62,7 +63,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 		clientIP := c.ClientIP()
 
 		gin.DefaultWriter.Write([]byte(
-			gin.FormatLog(method, path, statusCode, clientIP),
+			fmt.Sprintf("[GIN] %s | %s | %d | %s\n", method, path, statusCode, clientIP),
 		))
 	}
 }

@@ -11,15 +11,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies（带重试机制）
+RUN for i in 1 2 3; do \
+    apt-get update && apt-get install -y --no-install-recommends --fix-missing \
+        gcc \
+        libpq-dev \
+        curl \
+        && rm -rf /var/lib/apt/lists/* && break || \
+        (echo "Retry $i/3..." && sleep 5); \
+    done
 
-# Install Python dependencies
+# Install Python dependencies（使用国内镜像源）
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 # Copy application code
 COPY . .

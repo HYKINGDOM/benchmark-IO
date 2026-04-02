@@ -1,5 +1,5 @@
-# Build stage
-FROM gradle:8.5-jdk21-alpine AS build
+# Build stage（使用非 alpine 基础镜像以支持 Apple Silicon / arm64）
+FROM gradle:8.12-jdk21 AS build
 
 WORKDIR /app
 
@@ -16,16 +16,16 @@ COPY src ./src
 # Build application
 RUN gradle clean build -x test --no-daemon
 
-# Runtime stage
-FROM eclipse-temurin:21-jre-alpine
+# Runtime stage（使用非 alpine 基础镜像以兼容 arm64 和镜像源）
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
 # Install necessary packages
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -S benchmark && adduser -S benchmark -G benchmark
+RUN groupadd -r benchmark && useradd -r -g benchmark benchmark
 
 # Create temp directory for exports
 RUN mkdir -p /tmp/benchmark-exports && chown -R benchmark:benchmark /tmp/benchmark-exports

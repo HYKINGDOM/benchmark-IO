@@ -33,9 +33,6 @@ func NewExportService(db *gorm.DB, repo *repository.OrderRepository, taskSvc *Ta
 
 // ExportSync 同步导出
 func (s *ExportService) ExportSync(params *model.ExportRequest) ([]byte, string, error) {
-	var data []byte
-	var fileName string
-
 	switch params.GetFormat() {
 	case "xlsx":
 		data, fileName, err := s.exportExcelSync(params)

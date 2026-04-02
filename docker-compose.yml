@@ -50,11 +50,13 @@ services:
       dockerfile: Dockerfile
     container_name: benchmark-data-generator
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-benchmark}
       POSTGRES_USER: ${POSTGRES_USER:-benchmark}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-benchmark123}
+      DATA_BATCH_SIZE: ${DATA_BATCH_SIZE:-50000}
+      DATA_WORKERS: ${DATA_WORKERS:-4}
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,7 +77,7 @@ services:
     container_name: benchmark-java
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-benchmark}
+      DATABASE_URL: jdbc:postgresql://${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-benchmark}
       DATABASE_USERNAME: ${POSTGRES_USER:-benchmark}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-benchmark123}
       API_KEY: ${API_KEY:-benchmark-api-key-2024}
@@ -115,7 +117,13 @@ services:
       dockerfile: Dockerfile
     container_name: benchmark-golang
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-benchmark}:${POSTGRES_PASSWORD:-benchmark123}@postgres:5432/${POSTGRES_DB:-benchmark}?sslmode=disable
+      DATABASE_URL: postgres://${DB_USER:-benchmark}:${DB_PASSWORD:-benchmark123}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-benchmark}?sslmode=${DB_SSLMODE:-disable}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-benchmark}
+      DB_PASSWORD: ${DB_PASSWORD:-benchmark123}
+      DB_NAME: ${DB_NAME:-benchmark}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
       API_KEY: ${API_KEY:-benchmark-api-key-2024}
       GIN_MODE: ${GIN_MODE:-release}
     ports:
@@ -153,9 +161,11 @@ services:
       dockerfile: Dockerfile
     container_name: benchmark-python
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-benchmark}:${POSTGRES_PASSWORD:-benchmark123}@postgres:5432/${POSTGRES_DB:-benchmark}
+      DATABASE_URL: postgres://${DB_USER:-benchmark}:${DB_PASSWORD:-benchmark123}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-benchmark}
       API_KEY: ${API_KEY:-benchmark-api-key-2024}
+      API_KEYS: ${API_KEYS:-benchmark-api-key-2024}
       WORKERS: ${PYTHON_WORKERS:-4}
+      PORT: ${PORT:-8082}
     ports:
       - "${PYTHON_PORT:-8082}:8082"
     depends_on:
@@ -191,9 +201,10 @@ services:
       dockerfile: Dockerfile
     container_name: benchmark-rust
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-benchmark}:${POSTGRES_PASSWORD:-benchmark123}@postgres:5432/${POSTGRES_DB:-benchmark}
+      DATABASE_URL: postgres://${DB_USER:-benchmark}:${DB_PASSWORD:-benchmark123}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-benchmark}
       API_KEY: ${API_KEY:-benchmark-api-key-2024}
       RUST_LOG: ${RUST_LOG:-info}
+      SERVER_PORT: ${SERVER_PORT:-8083}
     ports:
       - "${RUST_PORT:-8083}:8083"
     depends_on:
@@ -329,7 +340,7 @@ services:
     image: prometheuscommunity/postgres-exporter:latest
     container_name: benchmark-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-benchmark}:${POSTGRES_PASSWORD:-benchmark123}@postgres:5432/${POSTGRES_DB:-benchmark}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-benchmark}:${POSTGRES_PASSWORD:-benchmark123}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-benchmark}?sslmode=${DB_SSLMODE:-disable}"
     ports:
       - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
     depends_on:

@@ -97,7 +97,7 @@ public class ExportService {
             writer.flush();
 
             // Stream data
-            try (Cursor<Record> cursor = orderRepository.streamOrders(queryRequest, limit)) {
+            try (Cursor<?> cursor = orderRepository.streamOrders(queryRequest, limit)) {
                 long count = 0;
                 StringBuilder buffer = new StringBuilder();
 
@@ -146,7 +146,7 @@ public class ExportService {
      * Export to CSV
      */
     private void exportToCsv(OrderQueryRequest request, Integer limit, OutputStream outputStream) throws IOException {
-        try (Cursor<Record> cursor = orderRepository.streamOrders(request, limit)) {
+        try (Cursor<?> cursor = orderRepository.streamOrders(request, limit)) {
             CsvWriter csvWriter = new CsvWriter(outputStream);
             csvWriter.writeHeader();
 
@@ -165,7 +165,7 @@ public class ExportService {
      * Export to Excel
      */
     private void exportToExcel(OrderQueryRequest request, Integer limit, OutputStream outputStream) throws IOException {
-        try (Cursor<Record> cursor = orderRepository.streamOrders(request, limit)) {
+        try (Cursor<?> cursor = orderRepository.streamOrders(request, limit)) {
             ExcelWriter excelWriter = new ExcelWriter(outputStream);
             excelWriter.writeHeader();
 
