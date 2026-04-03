@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use env_logger::Env;
 
 mod config;
@@ -44,9 +44,9 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(config_arc.clone()))
+            .app_data(config_arc.clone())
             .app_data(web::Data::new(task_manager.clone()))
-            .wrap(middleware::Logger::default())
+            .wrap(actix_web::middleware::Logger::default())
             .wrap(
                 actix_web::middleware::DefaultHeaders::new()
                     .add(("X-Content-Type-Options", "nosniff"))

@@ -20,8 +20,14 @@ impl FromRequest for ApiKeyAuth {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let config = req.app_data::<Arc<Config>>()
-            .expect("Config not found in app data");
+        let config = match req.app_data::<Arc<Config>>() {
+            Some(c) => c,
+            None => {
+                return ready(Err(error::ErrorInternalServerError(
+                    "Server configuration error"
+                )))
+            }
+        };
 
         // 从 Header 获取 API Key
         let api_key = req.headers()
@@ -54,8 +60,12 @@ impl FromRequest for OptionalApiKeyAuth {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let config = req.app_data::<Arc<Config>>()
-            .expect("Config not found in app data");
+        let config = match req.app_data::<Arc<Config>>() {
+            Some(c) => c,
+            None => {
+                return ready(Ok(OptionalApiKeyAuth { is_authenticated: false }))
+            }
+        };
 
         let api_key = req.headers()
             .get("X-API-Key")

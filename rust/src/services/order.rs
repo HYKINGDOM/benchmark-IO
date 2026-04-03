@@ -1,4 +1,5 @@
 use bigdecimal::BigDecimal;
+use bigdecimal::FromPrimitive;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, TextExpressionMethods};
@@ -55,11 +56,13 @@ impl OrderService {
 
         // 金额范围筛选
         if let Some(min_amount) = params.min_amount {
-            query = query.filter(orders::pay_amount.ge(BigDecimal::from(min_amount)));
+            let min_bd = BigDecimal::from_f64(min_amount).unwrap_or_default();
+            query = query.filter(orders::pay_amount.ge(min_bd));
         }
 
         if let Some(max_amount) = params.max_amount {
-            query = query.filter(orders::pay_amount.le(BigDecimal::from(max_amount)));
+            let max_bd = BigDecimal::from_f64(max_amount).unwrap_or_default();
+            query = query.filter(orders::pay_amount.le(max_bd));
         }
 
         // 用户ID筛选
@@ -78,8 +81,58 @@ impl OrderService {
             .get_result(conn)
             .map_err(|e| format!("Failed to count orders: {}", e))?;
 
+        // 重新构建查询以获取分页数据（因为 count() 会移动 query）
+        let mut query2 = orders::table
+            .filter(orders::is_deleted.eq(0))
+            .into_boxed();
+
+        // 重复所有筛选条件
+        if let Some(start_time) = &params.start_time {
+            if let Ok(dt) = NaiveDateTime::parse_from_str(start_time, "%Y-%m-%d %H:%M:%S") {
+                query2 = query2.filter(orders::created_at.ge(dt));
+            } else if let Ok(dt) = NaiveDateTime::parse_from_str(
+                &format!("{} 00:00:00", start_time),
+                "%Y-%m-%d %H:%M:%S",
+            ) {
+                query2 = query2.filter(orders::created_at.ge(dt));
+            }
+        }
+
+        if let Some(end_time) = &params.end_time {
+            if let Ok(dt) = NaiveDateTime::parse_from_str(end_time, "%Y-%m-%d %H:%M:%S") {
+                query2 = query2.filter(orders::created_at.le(dt));
+            } else if let Ok(dt) = NaiveDateTime::parse_from_str(
+                &format!("{} 23:59:59", end_time),
+                "%Y-%m-%d %H:%M:%S",
+            ) {
+                query2 = query2.filter(orders::created_at.le(dt));
+            }
+        }
+
+        if let Some(status) = &params.order_status {
+            query2 = query2.filter(orders::order_status.eq(status));
+        }
+
+        if let Some(min_amount) = params.min_amount {
+            let min_bd = BigDecimal::from_f64(min_amount).unwrap_or_default();
+            query2 = query2.filter(orders::pay_amount.ge(min_bd));
+        }
+
+        if let Some(max_amount) = params.max_amount {
+            let max_bd = BigDecimal::from_f64(max_amount).unwrap_or_default();
+            query2 = query2.filter(orders::pay_amount.le(max_bd));
+        }
+
+        if let Some(user_id) = params.user_id {
+            query2 = query2.filter(orders::user_id.eq(user_id));
+        }
+
+        if let Some(order_no) = &params.order_no {
+            query2 = query2.filter(orders::order_no.eq(order_no));
+        }
+
         // 查询分页数据
-        let order_list = query
+        let order_list = query2
             .order(orders::created_at.desc())
             .offset(offset)
             .limit(page_size)
@@ -138,11 +191,13 @@ impl OrderService {
 
         // 金额范围筛选
         if let Some(min_amount) = params.min_amount {
-            query = query.filter(orders::pay_amount.ge(BigDecimal::from(min_amount)));
+            let min_bd = BigDecimal::from_f64(min_amount).unwrap_or_default();
+            query = query.filter(orders::pay_amount.ge(min_bd));
         }
 
         if let Some(max_amount) = params.max_amount {
-            query = query.filter(orders::pay_amount.le(BigDecimal::from(max_amount)));
+            let max_bd = BigDecimal::from_f64(max_amount).unwrap_or_default();
+            query = query.filter(orders::pay_amount.le(max_bd));
         }
 
         // 用户ID筛选
@@ -202,11 +257,13 @@ impl OrderService {
 
         // 金额范围筛选
         if let Some(min_amount) = params.min_amount {
-            query = query.filter(orders::pay_amount.ge(BigDecimal::from(min_amount)));
+            let min_bd = BigDecimal::from_f64(min_amount).unwrap_or_default();
+            query = query.filter(orders::pay_amount.ge(min_bd));
         }
 
         if let Some(max_amount) = params.max_amount {
-            query = query.filter(orders::pay_amount.le(BigDecimal::from(max_amount)));
+            let max_bd = BigDecimal::from_f64(max_amount).unwrap_or_default();
+            query = query.filter(orders::pay_amount.le(max_bd));
         }
 
         // 用户ID筛选

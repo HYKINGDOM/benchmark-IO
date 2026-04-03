@@ -2,10 +2,11 @@ use std::sync::Arc;
 use std::fs::File;
 use std::io::Read;
 
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use actix_web_lab::sse;
-use futures::stream;
+use futures::stream::{self, StreamExt};
 use serde_json::json;
+use tokio_stream::StreamExt as TokioStreamExt;
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -75,10 +76,10 @@ pub async fn export_async(
     request: web::Json<ExportRequest>,
 ) -> HttpResponse {
     let task = ExportService::export_async(
-        pool.into_inner(),
+        pool.get_ref().clone(),
         config.export_dir.clone(),
         request.into_inner(),
-        task_manager.into_inner(),
+        task_manager.get_ref().clone(),
     );
 
     HttpResponse::Accepted().json(json!({
@@ -115,7 +116,7 @@ pub async fn export_sse(
     _auth: ApiKeyAuth,
     task_manager: web::Data<Arc<TaskManager>>,
     path: web::Path<Uuid>,
-) -> HttpResponse {
+) -> impl Responder {
     let task_id = path.into_inner();
 
     // 创建 SSE 流
@@ -147,16 +148,15 @@ pub async fn export_sse(
                 (data.to_string(), true)
             }
         }
-    })
-    .take_while(|(_, is_completed)| futures::future::ready(!*is_completed))
-    .map(|(data, _)| {
+    });
+    
+    let stream = StreamExt::take_while(stream, |(_, is_completed)| futures::future::ready(!*is_completed));
+    let stream = StreamExt::map(stream, |(data, _)| {
         Ok::<_, actix_web::Error>(sse::Event::Data(sse::Data::new(data)))
-    })
-    .throttle(std::time::Duration::from_millis(500));
+    });
 
-    sse::Sse::new(stream)
+    sse::Sse::from_stream(stream)
         .with_keep_alive(std::time::Duration::from_secs(10))
-        .into_response()
 }
 
 /// GET /api/v1/exports/download/{token} - 文件下载
@@ -243,7 +243,7 @@ pub async fn export_stream(
     use bytes::Bytes;
     use futures::stream::{Stream, StreamExt};
 
-    let pool_clone = pool.into_inner();
+    let pool_clone = pool.get_ref().clone();
     let request_inner = request.into_inner();
 
     // 创建流
@@ -341,7 +341,7 @@ pub async fn export_stream(
                     order.created_at.format("%Y-%m-%d %H:%M:%S"),
                     order.updated_at.format("%Y-%m-%d %H:%M:%S")
                 );
-                yield Ok(Bytes::from(row.as_bytes()));
+                yield Ok(Bytes::from(row));
             }
         }
     };

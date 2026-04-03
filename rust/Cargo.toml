@@ -16,6 +16,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 xlsxwriter = "0.6"
+async-stream = "0.3"
+tokio-stream = "0.1"
 csv = "1"
 futures = "0.3"
 actix-web-lab = "0.20"

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use xlsxwriter::*;
+use xlsxwriter::prelude::*;
 
 use crate::models::Order;
 
@@ -22,12 +22,12 @@ pub fn write_excel(filepath: &Path, orders: &[Order]) -> Result<(), String> {
     ];
 
     // 创建表头格式
-    let header_format = workbook.add_format()
-        .set_font_name("微软雅黑")
-        .set_font_size(11)
-        .set_bold()
-        .set_background_color(FormatColor::LightBlue)
-        .set_border(FormatBorder::Thin);
+    let mut header_format = Format::new();
+    header_format.set_font_name("微软雅黑");
+    header_format.set_font_size(11.0);
+    header_format.set_bold();
+    header_format.set_bg_color(FormatColor::Blue);
+    header_format.set_border(FormatBorder::Thin);
 
     // 写入表头
     for (col, header) in headers.iter().enumerate() {
@@ -36,10 +36,10 @@ pub fn write_excel(filepath: &Path, orders: &[Order]) -> Result<(), String> {
     }
 
     // 创建数据格式
-    let data_format = workbook.add_format()
-        .set_font_name("微软雅黑")
-        .set_font_size(10)
-        .set_border(FormatBorder::Thin);
+    let mut data_format = Format::new();
+    data_format.set_font_name("微软雅黑");
+    data_format.set_font_size(10.0);
+    data_format.set_border(FormatBorder::Thin);
 
     // 写入数据行
     for (row_idx, order) in orders.iter().enumerate() {
@@ -83,8 +83,7 @@ pub fn write_excel(filepath: &Path, orders: &[Order]) -> Result<(), String> {
     }
 
     // 冻结首行
-    worksheet.freeze_panes(1, 0)
-        .map_err(|e| format!("Failed to freeze panes: {:?}", e))?;
+    worksheet.freeze_panes(1, 0);
 
     workbook.close()
         .map_err(|e| format!("Failed to close workbook: {:?}", e))?;

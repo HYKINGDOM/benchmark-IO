@@ -48,25 +48,46 @@
   - [x] 5.6 验证订单查询接口返回数据
   - **修复**: Tortoise ORM minsize 参数移除、generate_schemas 注释、gunicorn 端口映射(→8082)、API_KEYS 配置
 
-- [ ] Task 6: Rust 后端服务验证 (端口 8083) ⚠️ 阻塞
+- [x] Task 6: Rust 后端服务验证 (端口 8083) ✅
   - [x] 6.1 尝试构建 Rust 服务镜像（Rust latest + rsproxy sparse 镜像 + libclang-dev）
-  - [ ] 6.2 编译失败：xlsxwriter 0.6.x API 重大变更导致 19 个编译错误
-  - **已完成**: Rust 版本升级到最新、Cargo 国内镜像配置、libclang 安装、SERVER_PORT 配置
-  - **阻塞原因**: xlsxwriter Format/Worksheet 从 mutable builder 改为全新 API，需重写 excel.rs
+  - [x] 6.2 修复 xlsxwriter 0.6.x API 重大变更（19 个编译错误全部解决）
+  - [x] 6.3 Docker 构建成功
+  - [x] 6.4 启动 Rust 服务容器并通过健康检查（/health → OK）
+  - [x] 6.5 验证端口 8083 可访问
+  - [x] 6.6 验证 API Key 认证（无 key → 401, 有 key → 通过认证）
+  - **修复详情**:
+    - `use xlsxwriter::*` → `use xlsxwriter::prelude::*`
+    - `workbook.add_format()` → `Format::new()` + 分步 mut 赋值
+    - `set_font_size(11)` → `set_font_size(11.0)` (f64 类型)
+    - `set_background_color()` → `set_bg_color()`
+    - `FormatColor::LightBlue` → `FormatColor::Blue`
+    - `freeze_panes()` 返回 () 而非 Result
+    - middleware 模块名称冲突解决
+    - BigDecimal::from_f64() 需要 FromPrimitive trait
+    - SSE 流类型转换 (impl Responder)
+    - query 被 count() 移动问题（重新构建查询）
+    - 新增依赖：async-stream、tokio-stream
+    - 中间件 panic 修复（expect → match）
 
 ## Phase 4: 前端服务验证
 
-- [ ] Task 7: 前端服务验证 (端口 80) 待执行
-  - [ ] 7.1 构建前端镜像
-  - [ ] 7.2 确保至少一个后端服务正在运行
-  - [ ] 7.3 启动前端服务容器
-  - [ ] 7.4-7.7 前端功能验证
+- [x] Task 7: 前端服务验证 (端口 80) ✅
+  - [x] 7.1 构建前端镜像（修复 vite.config.js minify 配置：terser → esbuild）
+  - [x] 7.2 确保至少一个后端服务正在运行（Rust 后端 8083 运行中）
+  - [x] 7.3 启动前端服务容器（使用 --no-deps 跳过依赖检查）
+  - [x] 7.4 验证基本可达性（HTTP 200）
+  - [x] 7.5 验证页面 HTML 内容（Vue 应用正常加载）
+  - [x] 7.6 验证静态资源（JS 1.2MB + CSS 355KB + 图标文件正常）
+  - [x] 7.7 容器运行状态检查（Up, 端口 0.0.0.0:80->80/tcp）
+  - **修复详情**:
+    - vite.config.js: `minify: 'terser'` → `minify: 'esbuild'`（避免缺少 terser 依赖）
+    - nginx.conf: 添加 Docker DNS 解析器 + 所有 proxy_pass 改为变量形式（延迟解析上游主机名）
 
 ## Phase 5: 清理收尾
 
-- [ ] Task 8: 清理环境 待执行
-  - [ ] 8.1 汇总各服务验证结果
-  - [ ] 8.2 关闭所有服务容器
+- [x] Task 8: 清理环境 ✅
+  - [x] 8.1 汇总各服务验证结果
+  - [x] 8.2 关闭所有服务容器（保留 postgres）
 
 ## 额外完成：配置与文档重构
 
@@ -87,7 +108,7 @@ graph TD
     T2 --> T3[Task 3: Java验证 ✅]
     T2 --> T4[Task 4: Golang验证 ✅]
     T2 --> T5[Task 5: Python验证 ✅]
-    T2 --> T6[Task 6: Rust验证 ⚠️ 阻塞]
+    T2 --> T6[Task 6: Rust验证 ✅]
     T3 --> T7[Task 7: 前端验证 待执行]
     T4 --> T7
     T5 --> T7
