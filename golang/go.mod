@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
+	github.com/prometheus/client_golang v1.20.5
 	github.com/xuri/excelize/v2 v2.8.1
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12

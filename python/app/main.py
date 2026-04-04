@@ -9,7 +9,10 @@ from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+
+# Prometheus monitoring
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.controllers import api_router
@@ -130,6 +133,9 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
+
+# Initialize Prometheus instrumentation
+Instrumentator().instrument(app).expose(app)
 
 
 # Health check endpoint

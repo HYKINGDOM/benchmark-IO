@@ -11,6 +11,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -56,6 +57,9 @@ func main() {
 			"service": "golang-api",
 		})
 	})
+
+	// Prometheus metrics 端点
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// API 路由组
 	api := router.Group("/api/v1")

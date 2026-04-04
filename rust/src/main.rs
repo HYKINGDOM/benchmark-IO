@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use actix_web::{web, App, HttpServer};
 use env_logger::Env;
+use prometheus::{Encoder, TextEncoder};
 
 mod config;
 mod controllers;
@@ -64,9 +65,25 @@ async fn main() -> std::io::Result<()> {
                     .route("/exports/stream", web::post().to(export::export_stream))
             )
             .route("/health", web::get().to(|| async { "OK" }))
+            .route("/metrics", web::get().to(metrics))
     })
     .bind(format!("{}:{}", config.server_host, config.server_port))?
     .workers(4)
     .run()
     .await
+}
+
+/// Prometheus metrics 端点
+async fn metrics() -> actix_web::HttpResponse {
+    use prometheus::TextEncoder;
+    let encoder = TextEncoder::new();
+    let metric_families = prometheus::gather();
+    let mut buffer = vec![];
+    if encoder.encode(&metric_families, &mut buffer).is_ok() {
+        actix_web::HttpResponse::Ok()
+            .content_type("text/plain; version=0.0.4; charset=utf-8")
+            .body(buffer)
+    } else {
+        actix_web::HttpResponse::InternalServerError().finish()
+    }
 }

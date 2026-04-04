@@ -21,9 +21,11 @@ RUN for i in 1 2 3; do \
         (echo "Retry $i/3..." && sleep 5); \
     done
 
-# Install Python dependencies（使用国内镜像源）
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+# 使用多个镜像源尝试安装
+RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r requirements.txt || \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
